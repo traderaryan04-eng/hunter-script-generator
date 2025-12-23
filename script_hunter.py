@@ -2,91 +2,101 @@ import streamlit as st
 from groq import Groq
 from fpdf import FPDF
 
-# 1. UI Configuration
 st.set_page_config(page_title="Hunter Script Generator", layout="centered")
 st.markdown("<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;}</style>", unsafe_allow_html=True)
 
-st.title("🎬 AI VIRAL SCRIPT HUNTER v2.0")
-st.caption("PDF Export | Smart Hooks | Viral Engine")
+st.title("🎬 AI VIRAL SCRIPT HUNTER v2.1")
+st.caption("Reels & Shorts | Sharp Hinglish | PDF Export")
 
-# --- 2. SECRETS SETUP ---
+# --- SECRETS & CLIENT ---
 try:
     GROQ_KEY = st.secrets["GROQ_API_KEY"]
     client = Groq(api_key=GROQ_KEY)
 except:
-    st.error("Bhai, Secrets mein 'GROQ_API_KEY' check karo!")
+    st.error("Bhai, Secrets mein 'GROQ_API_KEY' daalo!")
     GROQ_KEY = None
 
-# --- 3. PDF GENERATION FUNCTION ---
+# --- PDF CREATOR ---
 def create_pdf(script_text):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.set_font("Arial", size=12)
-    
-    # Title
     pdf.set_font("Arial", style="B", size=16)
-    pdf.cell(200, 10, txt="Viral Script - Hunter AI", ln=True, align='C')
-    pdf.ln(10)
-    
-    # Content (Encoding fix for Hinglish)
+    pdf.cell(200, 10, txt="Hunter Viral Script", ln=True, align="C")
+    pdf.ln(8)
     pdf.set_font("Arial", size=12)
-    # Replace unsupported characters if any
-    safe_text = script_text.encode('latin-1', 'replace').decode('latin-1')
-    pdf.multi_cell(0, 10, safe_text)
-    
+    safe_text = script_text.encode("latin-1", "replace").decode("latin-1")
+    pdf.multi_cell(0, 8, safe_text)
     return pdf.output(dest="S").encode("latin-1")
 
+# --- AI CALL ---
 def get_viral_script(topic, platform, tone):
     prompt = f"""
-    Topic: {topic}
-    Platform: {platform}
-    Tone: {tone} (Desi Hinglish, Short & Punchy)
-    
-    Structure:
-    1. 3 Viral Hooks (Stop scrolling immediately).
-    2. The Problem (Relatable pain point).
-    3. The Solution (Step-by-step).
-    4. Call to Action (CTA).
-    
-    Format: Use bullet points. Keep sentences short.
-    """
-    try:
-        completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return completion.choices[0].message.content
-    except Exception as e:
-        return f"AI Error: {str(e)}"
+You are an expert Indian short-form content writer.
+Write in clean Hinglish (English letters only, no mixed broken Hindi).
+No spelling mistakes, no extra filler words.
 
-# --- 4. INPUT SECTION ---
-with st.container():
-    topic = st.text_area("Topic (e.g. 5 Habits for Lazy Students)", placeholder="Type here...")
-    col1, col2 = st.columns(2)
-    with col1:
-        platform = st.selectbox("Platform", ["Instagram Reel", "YouTube Short"])
-    with col2:
-        tone = st.selectbox("Tone", ["Desi/Funny", "Serious/Educational", "Hustler"])
+Topic: {topic}
+Platform: {platform}
+Tone: {tone}
 
-# --- 5. GENERATE & DOWNLOAD ---
-if st.button("🚀 GENERATE SCRIPT"):
-    if topic and GROQ_KEY:
-        with st.spinner("Writing viral script..."):
-            script = get_viral_script(topic, platform, tone)
-            
-            # Display Script
-            st.markdown("---")
-            st.subheader("📝 Generated Script")
-            st.write(script)
-            
-            # PDF Download Button
-            pdf_bytes = create_pdf(script)
-            st.download_button(
-                label="📄 Download Script as PDF",
-                data=pdf_bytes,
-                file_name="viral_script.pdf",
-                mime="application/pdf"
-            )
+Output format (exactly follow):
+
+1) Hooks:
+- Hook 1: ...
+- Hook 2: ...
+- Hook 3: ...
+
+2) Main Script (max 8 lines, bullet points):
+- Line 1 ...
+- Line 2 ...
+...
+
+3) Call To Action (1 line):
+- CTA: ...
+
+Keep lines short, punchy and camera-friendly.
+"""
+    completion = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7,
+    )
+    return completion.choices[0].message.content
+
+# --- UI INPUTS ---
+topic = st.text_area(
+    "Topic (e.g. 5 Habits for Lazy Students)",
+    placeholder="5 Habits to Fix Your Lazy Routine in 2025",
+)
+
+col1, col2 = st.columns(2)
+with col1:
+    platform = st.selectbox("Platform", ["Instagram Reel", "YouTube Short"])
+with col2:
+    tone = st.selectbox("Tone", ["Desi/Funny", "Serious/Educational", "Hustler"])
+
+# --- GENERATE ---
+if st.button("🚀 GENERATE SHARP SCRIPT"):
+    if not topic:
+        st.warning("Bhai, topic toh daal pehle!")
+    elif not GROQ_KEY:
+        st.error("API key missing hai!")
     else:
-        st.warning("Topic daalo bhai!")
+        with st.spinner("Hunter AI script polish kar raha hai..."):
+            raw_script = get_viral_script(topic, platform, tone)
+
+        st.markdown("---")
+        st.subheader("📝 Final Script (Hooks + Bullet Points)")
+        st.write(raw_script)
+
+        # PDF Download
+        pdf_bytes = create_pdf(raw_script)
+        st.download_button(
+            label="📄 Download Script as PDF",
+            data=pdf_bytes,
+            file_name="hunter_viral_script.pdf",
+            mime="application/pdf",
+        )
+
+st.info("Tip: Pehle sirf Hooks test karo Reels me. Jo hook sabse zyada retention de, usko main script bana do.")
