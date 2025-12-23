@@ -1,62 +1,92 @@
 import streamlit as st
 from groq import Groq
+from fpdf import FPDF
 
-# 1. UI Configuration (Phone par bhi mast dikhega)
+# 1. UI Configuration
 st.set_page_config(page_title="Hunter Script Generator", layout="centered")
 st.markdown("<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;}</style>", unsafe_allow_html=True)
 
-st.title("🎬 AI VIRAL SCRIPT HUNTER v1.0")
-st.caption("Commerce to Tech Guy | Viral Reels & Shorts Engine")
+st.title("🎬 AI VIRAL SCRIPT HUNTER v2.0")
+st.caption("PDF Export | Smart Hooks | Viral Engine")
 
-# --- 2. SECRETS & AI SETUP ---
+# --- 2. SECRETS SETUP ---
 try:
-    # Nayi app mein bhi 'GROQ_API_KEY' secrets mein dalni hogi
     GROQ_KEY = st.secrets["GROQ_API_KEY"]
     client = Groq(api_key=GROQ_KEY)
 except:
-    st.error("Bhai, Streamlit Secrets mein 'GROQ_API_KEY' daalo!")
+    st.error("Bhai, Secrets mein 'GROQ_API_KEY' check karo!")
     GROQ_KEY = None
+
+# --- 3. PDF GENERATION FUNCTION ---
+def create_pdf(script_text):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_font("Arial", size=12)
+    
+    # Title
+    pdf.set_font("Arial", style="B", size=16)
+    pdf.cell(200, 10, txt="Viral Script - Hunter AI", ln=True, align='C')
+    pdf.ln(10)
+    
+    # Content (Encoding fix for Hinglish)
+    pdf.set_font("Arial", size=12)
+    # Replace unsupported characters if any
+    safe_text = script_text.encode('latin-1', 'replace').decode('latin-1')
+    pdf.multi_cell(0, 10, safe_text)
+    
+    return pdf.output(dest="S").encode("latin-1")
 
 def get_viral_script(topic, platform, tone):
     prompt = f"""
     Topic: {topic}
     Platform: {platform}
-    Tone: {tone} (Desi Hinglish style)
+    Tone: {tone} (Desi Hinglish, Short & Punchy)
     
-    Tasks:
-    1. Give 3 Viral Hooks (Starting lines to grab attention).
-    2. Write a full script (Intro, 3 main points, Outro).
-    3. Give 5 Viral Hashtags.
-    Character: A student (Commerce to Tech journey). Style: Begusarai Hunter style.
+    Structure:
+    1. 3 Viral Hooks (Stop scrolling immediately).
+    2. The Problem (Relatable pain point).
+    3. The Solution (Step-by-step).
+    4. Call to Action (CTA).
+    
+    Format: Use bullet points. Keep sentences short.
     """
     try:
         completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",  # Sabse stable model [web:85]
+            model="llama-3.1-8b-instant",
             messages=[{"role": "user", "content": prompt}]
         )
         return completion.choices[0].message.content
     except Exception as e:
         return f"AI Error: {str(e)}"
 
-# --- 3. INPUT SECTION ---
+# --- 4. INPUT SECTION ---
 with st.container():
-    topic = st.text_area("Bhai, topic kya hai? (e.g. Maine AI tool kaise banaya...)", value="", placeholder="Yahan apna idea likho...")
-    
+    topic = st.text_area("Topic (e.g. 5 Habits for Lazy Students)", placeholder="Type here...")
     col1, col2 = st.columns(2)
     with col1:
-        platform = st.selectbox("Platform", ["Instagram Reel", "YouTube Short", "YouTube Long Video"])
+        platform = st.selectbox("Platform", ["Instagram Reel", "YouTube Short"])
     with col2:
-        tone = st.selectbox("Tone", ["Desi/Funny", "Serious/Educational", "Hustler/Motivational"])
+        tone = st.selectbox("Tone", ["Desi/Funny", "Serious/Educational", "Hustler"])
 
-# --- 4. EXECUTION ---
-if st.button("🚀 GENERATE VIRAL SCRIPT"):
+# --- 5. GENERATE & DOWNLOAD ---
+if st.button("🚀 GENERATE SCRIPT"):
     if topic and GROQ_KEY:
-        with st.spinner("Hunter AI script likh raha hai..."):
-            res = get_viral_script(topic, platform, tone)
+        with st.spinner("Writing viral script..."):
+            script = get_viral_script(topic, platform, tone)
+            
+            # Display Script
             st.markdown("---")
-            st.subheader("📝 Your Viral Script")
-            st.write(res)
+            st.subheader("📝 Generated Script")
+            st.write(script)
+            
+            # PDF Download Button
+            pdf_bytes = create_pdf(script)
+            st.download_button(
+                label="📄 Download Script as PDF",
+                data=pdf_bytes,
+                file_name="viral_script.pdf",
+                mime="application/pdf"
+            )
     else:
-        st.warning("Bhai, topic dalo aur check karo API key connected hai ya nahi!")
-
-st.info("Hunter Tip: Pehla hook sabse powerful hona chahiye taaki audience scroll na kare! 📸")
+        st.warning("Topic daalo bhai!")
